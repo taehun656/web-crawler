@@ -1,0 +1,94 @@
+{
+  "domain": "hometax.go.kr",
+  "capability": "api",
+  "fetcher_type": "plain_session",
+  "antibot_type": "none",
+  "antibot_strategy": "none",
+  "site_type": "hidden_api",
+  "framework": "WebSquare(껍데기) + jQuery 백엔드(teer)",
+  "robots": {
+    "allowed": true,
+    "crawl_delay": null,
+    "checked_at": "2026-09-01",
+    "url": "https://hometax.go.kr/robots.txt"
+  },
+  "navigation": [
+    "홈택스 메인 → 상담사례(4703000000) → 인터넷 상담사례 조회(4703020000)",
+    "화면 본문은 iframe(mf_txppIframe) = https://teer.hometax.go.kr/home.do 로, 이 주소를 직접 POST 하면 된다"
+  ],
+  "api_endpoints": [
+    {
+      "name": "목록(세법 상담사례)",
+      "url": "https://teer.hometax.go.kr/home.do",
+      "method": "POST",
+      "content_type": "application/x-www-form-urlencoded",
+      "key_params": {
+        "url": "pub/getListA01",
+        "mode": "getListA01",
+        "reqTp": "00101 (세법 상담사례 탭 / 홈택스 상담사례는 다른 코드)",
+        "reqTpFg": "C",
+        "currentPage": "1..N",
+        "countPerPage": "100 (최대치 확인됨)",
+        "fr_dt/to_dt": "YYYY/MM/DD — 화면 기본값이 1개월이라 월 단위로 끊어 조회",
+        "reqTpCode": "⚠ 서버가 무시한다 — 상담유형 필터가 안 걸리므로 결과에서 걸러야 함"
+      },
+      "response_path": "HTML 안 <input name=\"resultData\"> 의 base64 → '<ts>,{JSON}' → SearchQueryResult.Collection[0].DocumentSet",
+      "field_mapping": {
+        "문서ID": "DOCID",
+        "제목": "req_title",
+        "질문내용": "req_content",
+        "상담유형": "req_tp_nm",
+        "상담유형코드": "req_tp_cd_s",
+        "상담상태": "req_status_nm",
+        "등록일시": "Date",
+        "총건수": "DocumentSet.TotalCount"
+      }
+    },
+    {
+      "name": "상세(답변)",
+      "url": "https://teer.hometax.go.kr/home.do",
+      "method": "POST",
+      "key_params": {
+        "url": "pub/getReq_view",
+        "mode": "getReq_view",
+        "reqId": "encB64(DOCID) — base64 인코딩 후 앞뒤 절반을 뒤바꾼다",
+        "fromWhere": "list",
+        "view_yn": "Y"
+      },
+      "field_mapping": {
+        "조회수": "<strong>조회수</strong>N</li>",
+        "등록일": "<strong>등록일</strong>YYYY-MM-DD</li>",
+        "답변일자": "<strong>답변일</strong>YYYY-MM-DD</li>",
+        "답변내용": "div#answerContentDiv",
+        "제목": "div.bv_tit.bg_qu h3"
+      }
+    }
+  ],
+  "selectors": {
+    "상담유형_코드_부가가치세": "0010109",
+    "상담유형_코드_양도소득세": "0010113",
+    "상담유형_코드_종합소득세": "0010118",
+    "상담유형_코드_법인세": "0010108",
+    "상담유형_코드_상속증여": "0010111",
+    "상담유형_코드_원천징수": "0010112",
+    "상담유형_코드_근로자녀장려금": "0010107",
+    "상담유형_코드_국세기본법": "0010104",
+    "상담유형_코드_종합부동산세": "0010117",
+    "상담유형_코드_교육세": "0010102",
+    "상담유형_코드_기타": "0010122"
+  },
+  "pii_warning": [
+    "목록 JSON 에 질문자 실명(caer_nm)과 내부 식별자(caer_id)가 들어 있다 — 화면에는 안 나온다.",
+    "수집 시 반드시 화이트리스트로 제외할 것. crawl_script.py 의 ALLOW_FIELDS 참조.",
+    "본문에는 기관 대표번호(여신금융협회·법률구조공단 등)가 섞여 있고, 드물게 질문자가 직접 적은 납부번호가 있다."
+  ],
+  "notes": [
+    "브라우저 불필요 — 세션 토큰·CSRF 없이 평문 POST 로 동작한다 (사다리 2단).",
+    "목록 1요청에 최대 100건 + 질문내용 전문까지 실려 온다. 답변·조회수만 상세 1요청씩.",
+    "조회수는 목록에 없다. 조회수 정렬이 필요하면 그 달 전체를 상세까지 받아야 순위가 나온다.",
+    "상세를 열면 그 건의 조회수가 1 오른다 — 수집 자체가 수치를 건드린다는 점 유의.",
+    "wqAction.do(hometax.go.kr)는 WebSquare 껍데기용이고 상담사례 데이터와 무관하다.",
+    "2026-09-01 2026년 1~8월 부가가치세 240건 수집 검증 완료 (전체 1,738건 중 필터, 260요청 / 4.3분, 빈값 0%)",
+    "월별 부가세 건수: 1월 53 · 2월 16 · 3월 13 · 4월 30 · 5월 21 · 6월 24 · 7월 57 · 8월 26"
+  ]
+}
